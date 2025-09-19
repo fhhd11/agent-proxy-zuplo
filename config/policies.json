@@ -7,20 +7,44 @@
         "export": "default",
         "module": "$import(./modules/agent-auth-proxy)",
         "options": {
-          "agentSecretKey": "$env(AGENT_SECRET_KEY)"
+          "agentSecretKey": "$env(AGENT_SECRET_KEY)",
+          "supabaseUrl": "$env(SUPABASE_URL)",
+          "supabaseServiceRoleKey": "$env(SUPABASE_SERVICE_ROLE_KEY)"
         }
       }
     },
     {
-      "name": "rate-limit-agents",
-      "policyType": "rate-limit-inbound",
+      "name": "user-jwt-auth",
+      "policyType": "supabase-jwt-auth-inbound", 
       "handler": {
-        "export": "RateLimitInboundPolicy",
+        "export": "SupabaseJwtInboundPolicy",
         "module": "$import(@zuplo/runtime)",
         "options": {
-          "rateLimitBy": "user",
-          "requestsAllowed": 100,
-          "timeWindowMinutes": 1
+          "secret": "$env(SUPABASE_JWT_SECRET)",
+          "allowUnauthenticatedRequests": false
+        }
+      }
+    },
+    {
+      "name": "service-auth",
+      "policyType": "custom-code-inbound",
+      "handler": {
+        "export": "default", 
+        "module": "$import(./modules/service-auth)",
+        "options": {
+          "serviceKey": "$env(SERVICE_SECRET_KEY)"
+        }
+      }
+    },
+    {
+      "name": "add-auth-headers",
+      "policyType": "custom-code-inbound",
+      "handler": {
+        "export": "default",
+        "module": "$import(./modules/add-auth-headers)",
+        "options": {
+          "lettaApiKey": "$env(LETTA_API_KEY)",
+          "agentManagementKey": "$env(AGENT_MANAGEMENT_API_KEY)"
         }
       }
     }

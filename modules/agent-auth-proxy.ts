@@ -1,13 +1,13 @@
 import { ZuploContext, ZuploRequest } from "@zuplo/runtime";
 
 interface UserProfile {
-  litellm_key_id: string;
-  allowed_models?: string[];
-  monthly_limit?: number;
+  litellm_key: string;
 }
 
 interface PolicyOptions {
   agentSecretKey: string;
+  supabaseUrl: string;
+  supabaseServiceRoleKey: string;
 }
 
 export default async function agentAuthProxy(
@@ -17,10 +17,12 @@ export default async function agentAuthProxy(
   policyName: string,
 ): Promise<ZuploRequest | Response> {
   try {
+    // Логируем наличие конфигурации
+    context.log.info(`Configuration check - URL: ${options.supabaseUrl ? 'set' : 'missing'}, Key: ${options.supabaseServiceRoleKey ? 'set' : 'missing'}, Agent Key: ${options.agentSecretKey ? 'set' : 'missing'}`);
+
     // 1. Проверка секретного ключа агента
     const authHeader = request.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      context.log.error("Missing or invalid Authorization header");
       return new Response(JSON.stringify({
         error: "Unauthorized",
         message: "Missing Authorization header"
@@ -45,7 +47,6 @@ export default async function agentAuthProxy(
     // 2. Извлечение userid из URL параметров
     const userId = request.params.userid;
     if (!userId) {
-      context.log.error("Missing userid parameter");
       return new Response(JSON.stringify({
         error: "Bad Request",
         message: "Missing userid parameter"
@@ -58,8 +59,8 @@ export default async function agentAuthProxy(
     context.log.info(`Processing request for user: ${userId}`);
 
     // 3. Получение LiteLLM ключа пользователя из Supabase
-    const userProfile = await fetchUserProfile(userId, context);
-    if (!userProfile?.litellm_key_id) {
+    const userProfile = await fetchUserProfile(userId, context, options);
+    if (!userProfile?.litellm_key) {
       context.log.error(`No LiteLLM key found for user: ${userId}`);
       return new Response(JSON.stringify({
         error: "Forbidden",
@@ -70,18 +71,12 @@ export default async function agentAuthProxy(
       });
     }
 
-    // 4. Валидация запроса (опционально)
-    await validateRequest(request, userProfile, context);
-
-    // 5. Создание нового запроса с замененным Authorization header
+    // 4. Создание нового запроса с замененным Authorization header
     const newHeaders = new Headers(request.headers);
-    newHeaders.set("Authorization", `Bearer ${userProfile.litellm_key_id}`);
-    
-    // Добавляем метаданные для трекинга
+    newHeaders.set("Authorization", `Bearer ${userProfile.litellm_key}`);
     newHeaders.set("X-User-ID", userId);
     newHeaders.set("X-Proxy-Source", "zuplo-agent-proxy");
 
-    // Создаем новый запрос
     const newRequest = new Request(request.url, {
       method: request.method,
       headers: newHeaders,
@@ -94,7 +89,7 @@ export default async function agentAuthProxy(
       data: { userId, source: "agent" }
     };
 
-    context.log.info(`Successfully authenticated user ${userId} for LiteLLM proxy`);
+    context.log.info(`Successfully authenticated user ${userId} with LiteLLM key`);
     return newRequest as ZuploRequest;
 
   } catch (error) {
@@ -109,70 +104,61 @@ export default async function agentAuthProxy(
   }
 }
 
-async function fetchUserProfile(userId: string, context: ZuploContext): Promise<UserProfile | null> {
+async function fetchUserProfile(
+  userId: string, 
+  context: ZuploContext, 
+  options: PolicyOptions
+): Promise<UserProfile | null> {
   try {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceRoleKey) {
+    if (!options.supabaseUrl || !options.supabaseServiceRoleKey) {
       context.log.error("Missing Supabase configuration");
+      context.log.error(`SUPABASE_URL: ${options.supabaseUrl ? 'set' : 'missing'}`);
+      context.log.error(`SUPABASE_SERVICE_ROLE_KEY: ${options.supabaseServiceRoleKey ? 'set' : 'missing'}`);
       return null;
     }
 
+    context.log.info(`Fetching profile for user: ${userId} from ${options.supabaseUrl}`);
+
+    // Исправлен SQL запрос - убрана несуществующая колонка allowed_models
     const response = await fetch(
-      `${supabaseUrl}/rest/v1/user_profiles?id=eq.${userId}&select=litellm_key_id,allowed_models,monthly_limit`,
+      `${options.supabaseUrl}/rest/v1/user_profiles?id=eq.${userId}&select=litellm_key`,
       {
         headers: {
-          "apikey": serviceRoleKey,
-          "Authorization": `Bearer ${serviceRoleKey}`,
+          "apikey": options.supabaseServiceRoleKey,
+          "Authorization": `Bearer ${options.supabaseServiceRoleKey}`,
           "Content-Type": "application/json",
         }
       }
     );
 
+    context.log.info(`Supabase response status: ${response.status}`);
+
     if (!response.ok) {
       context.log.error(`Supabase error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      context.log.error(`Error details: ${errorText}`);
       return null;
     }
 
     const data = await response.json();
-    return data && data.length > 0 ? data[0] : null;
+    context.log.info(`Supabase response: ${JSON.stringify(data)}`);
+    
+    if (!data || data.length === 0) {
+      context.log.error(`User ${userId} not found in database`);
+      return null;
+    }
+
+    const userProfile = data[0];
+    if (!userProfile.litellm_key) {
+      context.log.error(`User ${userId} has no litellm_key in database`);
+      return null;
+    }
+
+    context.log.info(`Found LiteLLM key for user ${userId}: ${userProfile.litellm_key.substring(0, 10)}...`);
+    return userProfile;
 
   } catch (error) {
     context.log.error("Error fetching user profile:", error);
     return null;
-  }
-}
-
-async function validateRequest(
-  request: ZuploRequest, 
-  userProfile: UserProfile, 
-  context: ZuploContext
-): Promise<void> {
-  try {
-    // Парсим тело запроса для валидации
-    const body = await request.clone().json();
-    
-    // Проверяем обязательные поля
-    if (!body.messages || !Array.isArray(body.messages)) {
-      throw new Error("Invalid request format: messages array required");
-    }
-
-    if (!body.model) {
-      throw new Error("Invalid request format: model field required");
-    }
-
-    // Проверяем разрешенные модели (если настроено)
-    if (userProfile.allowed_models && userProfile.allowed_models.length > 0) {
-      if (!userProfile.allowed_models.includes(body.model)) {
-        throw new Error(`Model ${body.model} not allowed for user`);
-      }
-    }
-
-    context.log.info(`Request validation passed for model: ${body.model}`);
-    
-  } catch (error) {
-    context.log.error("Request validation failed:", error);
-    throw error;
   }
 }

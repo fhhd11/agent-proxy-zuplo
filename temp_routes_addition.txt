@@ -1,0 +1,131 @@
+,
+    "/api/v2/agents/{agentId}": {
+      "x-zuplo-path": {
+        "pathMode": "open-api"
+      },
+      "get": {
+        "operationId": "get-agent",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/agents/{agentId}",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["user-auth", "letta-user-auth", "agent-ownership-check"]
+          }
+        },
+        "summary": "Get agent details",
+        "tags": ["Agents"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Agent ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Agent"}
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Agent not owned by user"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "update-agent",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/agents/{agentId}",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["user-auth", "letta-user-auth", "agent-ownership-check"]
+          }
+        },
+        "summary": "Update agent",
+        "tags": ["Agents"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent updated"
+          }
+        }
+      }
+    },
+    "/api/v2/agents/{agentId}/messages": {
+      "x-zuplo-path": {
+        "pathMode": "open-api"
+      },
+      "post": {
+        "operationId": "send-message-to-agent",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/agents/{agentId}/messages",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["user-auth", "letta-user-auth", "agent-ownership-check"]
+          }
+        },
+        "summary": "Send message to agent",
+        "description": "Send message to Letta agent with streaming support",
+        "tags": ["Chat"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Agent ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/SendMessageRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message sent successfully"
+          }
+        }
+      }
+    }
+  }
+}

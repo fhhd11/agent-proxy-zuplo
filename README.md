@@ -1,177 +1,353 @@
-# Agent to LiteLLM Proxy
+# AI Agent Platform API Gateway
 
-Zuplo API Gateway прокси для перенаправления запросов от AI агентов к LiteLLM с правильной аутентификацией для биллинга по пользователям.
+Unified Zuplo API Gateway для персональных AI агентов с интеграцией LiteLLM биллинга, прокси к Letta Server и Agent Management Service.
 
-## Архитектура
+## 🏗️ Архитектура
 
 ```
-Letta Agents → Zuplo Proxy → LiteLLM Server
-     ↓              ↓             ↓
-Agent Secret → User LiteLLM → Per-user 
-    Key         Key         Billing
+Frontend → Zuplo Gateway → Letta Server (chat)
+    ↓           ↓              ↓
+   JWT     User Auth      Letta API
+  Token      Check          Key
+    
+    ↓           ↓              ↓
+   Zuplo → Agent Mgmt → Create Agent
+              Service
 ```
 
-## Функции
+## 📋 Возможности
 
-- ✅ Единый секретный ключ для всех агентов
-- ✅ Автоматическая подмена токенов на пользовательские LiteLLM ключи
-- ✅ Корректный биллинг по пользователям
-- ✅ Rate limiting по пользователям
-- ✅ Health checks для мониторинга
-- ✅ Валидация запросов
-- ✅ Структурированное логирование
+- ✅ **Agent Proxy** - проксирование LLM запросов с биллингом по пользователям
+- ✅ **Letta Server Proxy** - прямой доступ к Letta API для управления диалогами
+- ✅ **Agent Management** - создание персонализированных агентов
+- ✅ **User Authentication** - JWT токены от Supabase
+- ✅ **Service Authentication** - защищенные внутренние API
+- ✅ **Rate Limiting** - контроль нагрузки по пользователям
+- ✅ **Health Checks** - мониторинг состояния системы
+- ✅ **Structured Logging** - детальные логи всех операций
 
-## Установка
+## 🛠️ Установка
 
-### 1. Локальная разработка
+### Локальная разработка
 
 ```bash
 # Установка зависимостей
 npm install
 
-# Запуск локально
-npm run dev
+# Копирование конфигурации
+cp .env.example .env
 
-# Сборка
-npm run build
+# Запуск в dev режиме
+npm run dev
+# Доступно на http://localhost:9000
 ```
 
-### 2. Deploy в Zuplo
+### Деплой в Zuplo Cloud
 
 ```bash
-# Авторизация в Zuplo
+# Авторизация
 zuplo link
 
-# Деплой проекта
-npm run deploy
+# Деплой
+zuplo deploy
 ```
 
-## Конфигурация
-
-### Environment Variables
+## ⚙️ Конфигурация
 
 Скопируйте `.env.example` в `.env` и настройте:
 
+### Основные переменные
+
 ```env
-AGENT_SECRET_KEY=your-super-secret-agent-key
+# Supabase (обязательно)
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-LITELLM_BASE_URL=https://your-litellm-instance.com
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  
+SUPABASE_JWT_SECRET=your-jwt-secret
+
+# Letta Server (обязательно)
+LETTA_BASE_URL=https://your-letta-server.com
+LETTA_API_KEY=your-letta-api-key
+
+# Agent Management Service (обязательно)
+AGENT_MANAGEMENT_URL=https://your-agent-service.com
+AGENT_MANAGEMENT_API_KEY=your-service-api-key
+
+# LiteLLM (обязательно для биллинга)
+LITELLM_BASE_URL=https://your-litellm-proxy.com
+
+# Ключи аутентификации
+AGENT_SECRET_KEY=your-super-secret-agent-key
+SERVICE_SECRET_KEY=your-internal-service-key
 ```
 
-### Supabase Schema
+## 🔌 API Endpoints
 
-Убедитесь что в Supabase есть таблица `user_profiles`:
+### System Endpoints
 
-```sql
-CREATE TABLE public.user_profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id),
-  litellm_key_id TEXT NOT NULL,
-  allowed_models TEXT[] DEFAULT NULL,
-  monthly_limit INTEGER DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | API информация |
+| `GET` | `/health` | Health check |
+| `GET` | `/docs` | Swagger документация |
 
-## API Endpoints
+### Agent Proxy (существующий)
 
-### POST /api/v1/agents/{userid}/messages
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/v1/agents/{userid}/messages` | Agent Secret | Прокси к LiteLLM с биллингом |
 
-Основной эндпоинт для агентов.
+### Letta Server Proxy (новое)
 
-**Request:**
-```bash
-curl -X POST "https://your-gateway.zuplo.app/api/v1/agents/user123/messages" \
-  -H "Authorization: Bearer your-agent-secret-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-4o",
-    "messages": [
-      {"role": "user", "content": "Hello!"}
-    ]
-  }'
-```
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/v1/letta/agents` | JWT | Список агентов пользователя |
+| `GET` | `/api/v1/letta/agents/{agent_id}` | JWT | Детали агента |
+| `PATCH` | `/api/v1/letta/agents/{agent_id}` | JWT | Обновить агента |
+| `POST` | `/api/v1/letta/agents/{agent_id}/messages` | JWT | Отправить сообщение |
+| `GET` | `/api/v1/letta/agents/{agent_id}/messages` | JWT | История сообщений |
 
-**Response:** Стандартный OpenAI-совместимый ответ
+### Agent Management (новое)
 
-### GET /health
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/v1/agents/create` | JWT | Создать персонализированного агента |
+| `GET` | `/api/v1/agents/status` | JWT | Статус агента пользователя |
 
-Health check эндпоинт для мониторинга.
+## 🔐 Аутентификация
 
-## Использование в Agent Management Service
+### 1. User JWT Authentication (для фронтенда)
 
-```typescript
-// При создании агента устанавливайте кастомный endpoint
-const agentConfig = {
-  model_endpoint: `${ZUPLO_BASE_URL}/api/v1/agents/${userId}/messages`,
-  model_endpoint_type: "openai",
-  openai_key: process.env.AGENT_SECRET_KEY, // Единый ключ
-  model: "gpt-4o"
+```javascript
+// В заголовках запросов от фронтенда
+const headers = {
+  'Authorization': `Bearer ${userJwtToken}`,
+  'Content-Type': 'application/json'
 };
 ```
 
-## Мониторинг
+### 2. Agent Secret Authentication (для агентов)
 
-- **Health checks:** `GET /health` 
-- **Logs:** Доступны в Zuplo dashboard
-- **Metrics:** LiteLLM dashboard покажет usage по пользователям
+```javascript 
+// Для прокси агентов к LiteLLM
+const headers = {
+  'Authorization': `Bearer ${AGENT_SECRET_KEY}`,
+  'Content-Type': 'application/json'  
+};
+```
 
-## Безопасность
+### 3. Service Authentication (внутренние сервисы)
 
-- Секретный ключ агента должен быть надежно защищен
-- Пользовательские LiteLLM ключи никогда не передаются агентам
-- Rate limiting предотвращает злоупотребления
-- Все запросы логируются для аудита
+```javascript
+// Для внутренних API запросов
+const headers = {
+  'Authorization': `Bearer ${SERVICE_SECRET_KEY}`,
+  'Content-Type': 'application/json'
+};
+```
 
-## Development
+## 📱 Примеры использования
+
+### Регистрация и создание агента
+
+```javascript
+// 1. Пользователь регистрируется в Supabase Auth
+// 2. Edge Function автоматически создает LiteLLM ключ
+// 3. Пользователь заполняет профиль и создает агента
+
+const createAgent = async (userToken, personalInfo) => {
+  const response = await fetch('/api/v1/agents/create', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${userToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ personalInfo })
+  });
+  
+  const result = await response.json();
+  // result.chat_endpoint - URL для чата с агентом
+  return result;
+};
+```
+
+### Чат с агентом через Letta
+
+```javascript
+const sendMessage = async (userToken, agentId, message) => {
+  const response = await fetch(`/api/v1/letta/agents/${agentId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${userToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: message,
+      stream: true
+    })
+  });
+  
+  // Обработка streaming ответа
+  const reader = response.body.getReader();
+  // ...
+};
+```
+
+### Получение истории сообщений
+
+```javascript
+const getMessages = async (userToken, agentId, limit = 50) => {
+  const response = await fetch(`/api/v1/letta/agents/${agentId}/messages?limit=${limit}`, {
+    headers: {
+      'Authorization': `Bearer ${userToken}`
+    }
+  });
+  
+  return response.json();
+};
+```
+
+## 🎯 User Journey
+
+### 1. **Регистрация пользователя**
+```mermaid  
+sequenceDiagram
+    User->>Supabase: Register account
+    Supabase->>EdgeFunction: Trigger webhook
+    EdgeFunction->>LiteLLM: Create user key  
+    EdgeFunction->>Database: Save user profile
+    EdgeFunction-->>User: Registration complete
+```
+
+### 2. **Создание агента**
+```mermaid
+sequenceDiagram
+    User->>Zuplo: POST /agents/create + JWT
+    Zuplo->>AgentMgmt: Forward request
+    AgentMgmt->>Letta: Create personalized agent  
+    AgentMgmt->>Database: Save agent mapping
+    AgentMgmt-->>Zuplo: Agent created
+    Zuplo-->>User: Agent details + chat endpoint
+```
+
+### 3. **Чат с агентом**
+```mermaid  
+sequenceDiagram
+    User->>Zuplo: POST /letta/agents/{id}/messages + JWT
+    Zuplo->>Letta: Forward with Letta API key
+    Letta->>LiteLLM: Process message (user's key)
+    LiteLLM-->>Letta: LLM response 
+    Letta-->>Zuplo: Agent response
+    Zuplo-->>User: Stream response
+```
+
+## 🔧 Мониторинг
+
+- **Health Checks**: `GET /health` - статус всех сервисов
+- **Logs**: Доступны в Zuplo Dashboard 
+- **Metrics**: LiteLLM Dashboard показывает биллинг по пользователям
+- **Tracing**: Все запросы содержат correlation ID
+
+## 🚦 Rate Limiting
+
+- **Per User**: 100 requests/minute для authenticated пользователей
+- **Per Agent**: Настраивается индивидуально
+- **Global**: Защита от DDoS атак
+
+## 🔒 Безопасность
+
+- **JWT Validation** - все пользовательские запросы проходят проверку
+- **Service Keys** - защищенные внутренние API
+- **Rate Limiting** - защита от злоупотреблений
+- **Request Logging** - аудит всех операций
+- **CORS Policies** - настроенные политики CORS
+
+## 🧪 Тестирование
 
 ### Локальное тестирование
 
 ```bash
-# Запуск в dev режиме
-zuplo dev
+# Health check
+curl http://localhost:9000/health
 
-# Тестирование endpoint
-curl -X POST "http://localhost:9000/api/v1/agents/test-user/messages" \
-  -H "Authorization: Bearer test-key" \
+# Создание агента (нужен валидный JWT)
+curl -X POST "http://localhost:9000/api/v1/agents/create" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"model": "gpt-4o", "messages": [{"role": "user", "content": "test"}]}'
+  -d '{
+    "personalInfo": {
+      "name": "Test User",
+      "interests": ["programming", "AI"],
+      "communicationStyle": "friendly"
+    }
+  }'
+
+# Отправка сообщения через Letta
+curl -X POST "http://localhost:9000/api/v1/letta/agents/AGENT_ID/messages" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Hello!",
+    "stream": false
+  }'
 ```
 
-### Структура проекта
+## 📁 Структура проекта
 
 ```
-agent-proxy-project/
+agent-proxy-zuplo/
 ├── config/
-│   ├── routes.oas.json     # API routes definition
-│   └── policies.json       # Security policies
+│   ├── routes.oas.json      # API маршруты и схемы
+│   └── policies.json        # Политики безопасности
 ├── modules/
-│   ├── agent-auth-proxy.ts # Main proxy logic
-│   └── health-check.ts     # Health endpoint
-├── schemas/                # JSON schemas
-├── docs/                   # Documentation
-├── tests/                  # Test files
-├── tsconfig.json          # TypeScript config
-├── package.json           # Dependencies
-└── .env.example           # Environment template
+│   ├── agent-auth-proxy.ts  # Прокси агентов к LiteLLM  
+│   ├── service-auth.ts      # Аутентификация сервисов
+│   ├── add-auth-headers.ts  # Добавление API ключей
+│   ├── health-check.ts      # Health endpoint
+│   └── api-info.ts         # API информация
+├── tests/                   # Тесты
+├── .env.example            # Пример конфигурации
+├── package.json            # Зависимости
+└── README.md              # Эта документация
 ```
 
-## Troubleshooting
+## 🔄 Troubleshooting
 
 ### Частые проблемы
 
-1. **401 Unauthorized** - проверьте AGENT_SECRET_KEY
-2. **403 Forbidden** - пользователь не найден в Supabase или нет LiteLLM ключа
-3. **500 Internal Error** - проверьте конфигурацию Supabase/LiteLLM
+**401 Unauthorized на JWT endpoints:**
+- Проверьте `SUPABASE_JWT_SECRET`
+- Убедитесь что JWT токен валиден
+- Проверьте формат заголовка: `Bearer <token>`
 
-### Логи
+**403 Forbidden на Agent Management:**
+- Проверьте `AGENT_MANAGEMENT_API_KEY`
+- Убедитесь что сервис доступен
 
-Все ошибки логируются с контекстом. Проверьте Zuplo dashboard для детальной информации.
+**502/503 на Letta endpoints:**
+- Проверьте `LETTA_BASE_URL` и `LETTA_API_KEY`
+- Проверьте доступность Letta Server
 
-## Contributing
+### Логирование
 
-1. Fork проект
-2. Создайте feature branch
-3. Commit изменения  
-4. Push в branch
-5. Создайте Pull Request
+Все операции логируются с контекстом:
+- User ID (из JWT или Agent Secret)
+- Operation type
+- Response times
+- Error details
+
+Логи доступны в Zuplo Dashboard → Analytics → Logs
+
+## 🛣️ Roadmap
+
+### Планы развития
+
+- [ ] **WebSocket Support** - real-time чат
+- [ ] **File Upload** - поддержка файлов в чате
+- [ ] **Agent Templates** - готовые шаблоны агентов  
+- [ ] **Usage Analytics** - детальная аналитика пользователей
+- [ ] **Multi-tenant Support** - поддержка организаций
+- [ ] **Plugin System** - расширяемость через плагины
+
+---
+
+**AI Agent Platform** - это современная платформа для персональных AI ассистентов с enterprise-grade безопасностью, масштабируемостью и мониторингом.
