@@ -610,7 +610,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-auth", "letta-user-auth"]
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "List user agents",
@@ -652,7 +652,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-auth", "inject-user-info"]
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Create new agent",
