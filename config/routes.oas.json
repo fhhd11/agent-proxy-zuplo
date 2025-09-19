@@ -456,6 +456,35 @@
         }
       }
     },
+    "/api.json": {
+      "get": {
+        "operationId": "openapi-spec",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "default",
+            "module": "$import(./modules/openapi-spec)"
+          }
+        },
+        "summary": "OpenAPI Specification",
+        "description": "Returns the OpenAPI specification for this API",
+        "tags": [
+          "System"
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/agents/{userid}/messages": {
       "x-zuplo-path": {
         "pathMode": "open-api"
