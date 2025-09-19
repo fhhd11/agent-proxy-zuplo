@@ -1,0 +1,231 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Agent to LiteLLM Proxy",
+    "description": "Proxy service for AI agents to LiteLLM with user-specific authentication",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@example.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://your-gateway.zuplo.app",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/api/v1/agents/{userid}/messages": {
+      "x-zuplo-path": {
+        "pathMode": "open-api"
+      },
+      "post": {
+        "summary": "Proxy agent requests to LiteLLM",
+        "description": "Accepts agent requests with secret key and forwards to LiteLLM with user-specific key for proper billing",
+        "operationId": "proxy-agent-to-litellm",
+        "tags": ["Agent Proxy"],
+        "parameters": [
+          {
+            "name": "userid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9-_]+$"
+            },
+            "description": "User ID for LiteLLM key lookup"
+          }
+        ],
+        "requestBody": {
+          "description": "OpenAI-compatible LLM request payload",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMRequest"
+              }
+            }
+          }
+        },
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LITELLM_BASE_URL}/chat/completions",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["agent-auth-proxy"]
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful LLM response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid agent secret key"
+          },
+          "403": {
+            "description": "User has no LiteLLM access or quota exceeded"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check endpoint",
+        "description": "Returns the health status of the API",
+        "operationId": "health-check",
+        "tags": ["System"],
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "functionHandler",
+            "module": "$import(./modules/health-check)"
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LLMRequest": {
+        "type": "object",
+        "required": ["model", "messages"],
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "The model to use for completion",
+            "example": "gpt-4o"
+          },
+          "messages": {
+            "type": "array",
+            "description": "Array of message objects",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          },
+          "max_tokens": {
+            "type": "integer",
+            "description": "Maximum number of tokens to generate",
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Sampling temperature",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "Whether to stream the response",
+            "default": false
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["system", "user", "assistant"],
+            "description": "The role of the message author"
+          },
+          "content": {
+            "type": "string",
+            "description": "The content of the message"
+          }
+        }
+      },
+      "LLMResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "created": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "message": {
+                  "$ref": "#/components/schemas/Message"
+                },
+                "finish_reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "prompt_tokens": {
+                "type": "integer"
+              },
+              "completion_tokens": {
+                "type": "integer"
+              },
+              "total_tokens": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

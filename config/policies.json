@@ -1,0 +1,28 @@
+{
+  "policies": [
+    {
+      "name": "agent-auth-proxy",
+      "policyType": "custom-code-inbound",
+      "handler": {
+        "export": "default",
+        "module": "$import(./modules/agent-auth-proxy)",
+        "options": {
+          "agentSecretKey": "$env(AGENT_SECRET_KEY)"
+        }
+      }
+    },
+    {
+      "name": "rate-limit-agents",
+      "policyType": "rate-limit-inbound",
+      "handler": {
+        "export": "RateLimitInboundPolicy",
+        "module": "$import(@zuplo/runtime)",
+        "options": {
+          "rateLimitBy": "user",
+          "requestsAllowed": 100,
+          "timeWindowMinutes": 1
+        }
+      }
+    }
+  ]
+}

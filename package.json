@@ -1,0 +1,22 @@
+{
+  "name": "agent-proxy-zuplo",
+  "version": "1.0.0",
+  "description": "Zuplo API Gateway for Agent to LiteLLM proxy",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "zuplo dev",
+    "test": "jest",
+    "deploy": "zuplo deploy"
+  },
+  "dependencies": {
+    "@zuplo/runtime": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
