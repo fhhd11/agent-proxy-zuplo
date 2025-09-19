@@ -1,6 +1,6 @@
 import { ZuploContext, ZuploRequest } from "@zuplo/runtime";
 
-export async function functionHandler(
+export default async function healthCheck(
   request: ZuploRequest,
   context: ZuploContext,
 ): Promise<Response> {
