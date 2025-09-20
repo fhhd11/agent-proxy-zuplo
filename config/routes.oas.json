@@ -1,8 +1,8 @@
 {
   "info": {
     "title": "AI Agent Platform API",
-    "description": "Unified API for agent management and chat interactions with new AMS integration",
-    "version": "3.0.0",
+    "description": "Unified API for agent management and chat interactions with full Letta integration",
+    "version": "3.1.0",
     "contact": {
       "name": "API Support"
     }
@@ -33,7 +33,7 @@
           },
           "version": {
             "type": "string",
-            "example": "3.0.0"
+            "example": "3.1.0"
           },
           "description": {
             "type": "string"
@@ -69,7 +69,7 @@
           },
           "version": {
             "type": "string",
-            "example": "3.0.0"
+            "example": "3.1.0"
           },
           "checks": {
             "type": "object",
@@ -91,6 +91,103 @@
                 "enum": ["ok", "error", "not_configured"]
               }
             }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          }
+        }
+      },
+      "LettaAgent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "agent-12345"
+          },
+          "user_id": {
+            "type": "string",
+            "example": "user-67890"
+          },
+          "name": {
+            "type": "string",
+            "example": "My Personal Assistant"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "system": {
+            "type": "string",
+            "description": "System prompt/personality"
+          },
+          "persona": {
+            "type": "string",
+            "description": "Agent persona"
+          },
+          "human": {
+            "type": "string",
+            "description": "Human description"
+          }
+        }
+      },
+      "LettaMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "assistant", "system"]
+          },
+          "text": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "agent_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Message text to send to the agent"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "system"],
+            "default": "user",
+            "description": "Role of the message sender"
+          },
+          "stream": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to stream the response"
           }
         }
       },
@@ -279,27 +376,12 @@
           },
           "dry_run": {
             "type": "boolean",
-            "description": "Perform a dry run without actually upgrading",
-            "default": true
-          },
-          "use_queue": {
-            "type": "boolean",
-            "description": "Queue the upgrade for background processing",
+            "description": "Only return the upgrade plan without applying",
             "default": false
-          }
-        }
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "required": ["error"],
-        "properties": {
-          "error": {
-            "type": "string",
-            "example": "Bad Request"
           },
-          "message": {
-            "type": "string",
-            "example": "Invalid request parameters"
+          "variables": {
+            "type": "object",
+            "description": "Updated template variables"
           }
         }
       }
@@ -317,7 +399,7 @@
           }
         },
         "summary": "API Information",
-        "description": "Get basic information about the API",
+        "description": "Returns basic information about the API",
         "tags": ["System"],
         "responses": {
           "200": {
@@ -344,21 +426,11 @@
           }
         },
         "summary": "Health Check",
-        "description": "Check the health status of the API and its dependencies",
+        "description": "Returns the health status of the API and connected services",
         "tags": ["System"],
         "responses": {
           "200": {
-            "description": "Service is healthy",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service is unhealthy",
+            "description": "Service health status",
             "content": {
               "application/json": {
                 "schema": {
@@ -390,9 +462,408 @@
         }
       }
     },
-    "/api/v1/agents/{userId}/messages": {
+    "/api.json": {
+      "get": {
+        "operationId": "openapi-spec",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "default",
+            "module": "$import(./modules/openapi-spec)"
+          }
+        },
+        "summary": "OpenAPI Specification",
+        "description": "Returns the OpenAPI 3.0 specification for this API",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification in JSON format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "OpenAPI 3.0 specification"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/letta/agents": {
+      "get": {
+        "operationId": "letta-list-agents",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "List Letta agents",
+        "description": "Get all Letta agents for authenticated user",
+        "tags": ["Letta Server"],
+        "security": [{"UserJWT": []}],
+        "responses": {
+          "200": {
+            "description": "List of agents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LettaAgent"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/letta/agents/{agent_id}": {
+      "get": {
+        "operationId": "letta-get-agent",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.agent_id}",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Get agent details",
+        "description": "Get details of a specific Letta agent",
+        "tags": ["Letta Server"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the agent"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LettaAgent"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/letta/agents/{agent_id}/messages": {
+      "get": {
+        "operationId": "letta-get-messages",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.agent_id}/messages",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Get agent messages",
+        "description": "Get message history for a specific agent",
+        "tags": ["Letta Server"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the agent"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LettaMessage"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "operationId": "letta-send-message",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.agent_id}/messages",
+              "forwardSearch": false
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Send message to agent",
+        "description": "Send a message to a Letta agent and get response",
+        "tags": ["Letta Server"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the agent"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agent response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LettaMessage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/letta/agents/{agent_id}/memory": {
+      "get": {
+        "operationId": "letta-get-memory",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.agent_id}/memory",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Get agent memory",
+        "description": "Get current memory state of the agent",
+        "tags": ["Letta Server"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the agent"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent memory state"
+          }
+        }
+      },
+      "post": {
+        "operationId": "letta-update-memory",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.agent_id}/memory",
+              "forwardSearch": false
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Update agent memory",
+        "description": "Update the memory state of the agent",
+        "tags": ["Letta Server"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the agent"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "memory": {
+                    "type": "object",
+                    "description": "Memory data to update"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Memory updated successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/letta/agents/{agent_id}/archival": {
+      "get": {
+        "operationId": "letta-get-archival",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.agent_id}/archival",
+              "forwardSearch": true
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Get archival memory",
+        "description": "Get archival memory entries for the agent",
+        "tags": ["Letta Server"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the agent"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archival memory entries"
+          }
+        }
+      },
+      "post": {
+        "operationId": "letta-add-archival",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.agent_id}/archival",
+              "forwardSearch": false
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Add to archival memory",
+        "description": "Add new entries to agent's archival memory",
+        "tags": ["Letta Server"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the agent"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "Content to add to archival memory"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Content added to archival memory"
+          }
+        }
+      }
+    },
+    "/api/v1/agents/{userId}/messages": {
+      "post": {
+        "operationId": "send-message-legacy",
         "x-zuplo-route": {
           "corsPolicy": "none",
           "handler": {
@@ -407,10 +878,11 @@
             "inbound": ["user-jwt-auth", "add-auth-headers"]
           }
         },
-        "summary": "Send message to Letta agent",
-        "description": "Send a message to Letta agent and get response",
-        "tags": ["Letta Server"],
+        "summary": "Send message to agent (Legacy)",
+        "description": "Legacy endpoint for sending messages to Letta agent. Use /api/v1/letta/agents/{id}/messages instead.",
+        "tags": ["Letta Server (Legacy)"],
         "security": [{"UserJWT": []}],
+        "deprecated": true,
         "parameters": [
           {
             "name": "userId",
@@ -419,7 +891,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "User ID that owns the agent"
+            "description": "User ID (for legacy compatibility)"
           }
         ],
         "requestBody": {
@@ -427,18 +899,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["message"],
-                "properties": {
-                  "message": {
-                    "type": "string",
-                    "description": "Message to send to the agent"
-                  },
-                  "stream": {
-                    "type": "boolean",
-                    "default": false
-                  }
-                }
+                "$ref": "#/components/schemas/SendMessageRequest"
               }
             }
           }
@@ -446,35 +907,30 @@
         "responses": {
           "200": {
             "description": "Agent response"
-          },
-          "400": {
-            "description": "Invalid request"
-          },
-          "401": {
-            "description": "Unauthorized"
           }
         }
-      },
-      "get": {
-        "operationId": "letta-get-messages",
+      }
+    },
+    "/api/v1/agents/{userId}/proxy": {
+      "post": {
+        "operationId": "proxy-agent-to-litellm",
         "x-zuplo-route": {
           "corsPolicy": "none",
           "handler": {
-            "export": "urlRewriteHandler",
-            "module": "$import(@zuplo/runtime)",
+            "export": "default",
+            "module": "$import(./modules/agent-auth-proxy)",
             "options": {
-              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.userId}/messages",
-              "forwardSearch": true
+              "target": "litellm"
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["service-auth"]
           }
         },
-        "summary": "Get agent messages",
-        "description": "Get message history for Letta agent",
-        "tags": ["Letta Server"],
-        "security": [{"UserJWT": []}],
+        "summary": "Proxy agent requests to LiteLLM",
+        "description": "Proxy agent requests with secret key to LiteLLM with user-specific billing",
+        "tags": ["Agent Proxy"],
+        "security": [{"BearerAuth": []}],
         "parameters": [
           {
             "name": "userId",
@@ -482,28 +938,29 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 50
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 0
-            }
+            },
+            "description": "User ID for LiteLLM key lookup"
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "List of messages"
+            "description": "Successful LLM response"
+          },
+          "401": {
+            "description": "Invalid agent secret key"
+          },
+          "403": {
+            "description": "User has no LiteLLM access"
           }
         }
       }
@@ -526,7 +983,7 @@
           }
         },
         "summary": "Validate agent template",
-        "description": "Validate an agent template for syntax and completeness",
+        "description": "Validate an agent template format and structure",
         "tags": ["Template Management"],
         "security": [{"UserJWT": []}],
         "requestBody": {
@@ -551,16 +1008,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ValidationResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid template format",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -625,26 +1072,6 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Invalid template",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict - template version already exists or duplicate request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         }
       }
@@ -701,26 +1128,6 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Duplicate request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         }
       }
@@ -755,15 +1162,6 @@
               "type": "string"
             },
             "description": "ID of the agent to upgrade"
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Unique key to prevent duplicate requests"
           }
         ],
         "requestBody": {
@@ -778,59 +1176,7 @@
         },
         "responses": {
           "200": {
-            "description": "Upgrade completed or dry run result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "plan": {
-                      "type": "array",
-                      "description": "Migration steps to be executed"
-                    },
-                    "diff": {
-                      "type": "array",
-                      "description": "Changes that will be made"
-                    },
-                    "warnings": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "dry_run": {
-                      "type": "boolean"
-                    },
-                    "applied": {
-                      "type": "boolean"
-                    },
-                    "new_version": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Agent not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Duplicate request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
+            "description": "Upgrade completed or dry run result"
           }
         }
       }
