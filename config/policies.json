@@ -44,7 +44,8 @@
         "module": "$import(./modules/add-auth-headers)",
         "options": {
           "lettaApiKey": "$env(LETTA_API_KEY)",
-          "agentManagementKey": "$env(AGENT_MANAGEMENT_API_KEY)"
+          "amsApiKey": "$env(AMS_API_KEY)",
+          "supabaseAnonKey": "$env(SUPABASE_ANON_KEY)"
         }
       }
     }
