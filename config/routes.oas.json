@@ -1,8 +1,8 @@
 {
   "info": {
     "title": "AI Agent Platform API",
-    "description": "Unified API for agent management and chat interactions with LiteLLM billing integration",
-    "version": "2.0.0",
+    "description": "Unified API for agent management and chat interactions with new AMS integration",
+    "version": "3.0.0",
     "contact": {
       "name": "API Support"
     }
@@ -29,11 +29,11 @@
         "properties": {
           "name": {
             "type": "string",
-            "example": "Agent to LiteLLM Proxy"
+            "example": "Agent Platform API"
           },
           "version": {
             "type": "string",
-            "example": "1.0.0"
+            "example": "3.0.0"
           },
           "description": {
             "type": "string"
@@ -48,9 +48,6 @@
           },
           "endpoints": {
             "type": "object"
-          },
-          "usage": {
-            "type": "object"
           }
         }
       },
@@ -59,10 +56,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "ok",
-              "error"
-            ],
+            "enum": ["ok", "error"],
             "example": "ok"
           },
           "timestamp": {
@@ -75,26 +69,26 @@
           },
           "version": {
             "type": "string",
-            "example": "1.0.0"
+            "example": "3.0.0"
           },
           "checks": {
             "type": "object",
             "properties": {
               "supabase": {
                 "type": "string",
-                "enum": [
-                  "ok",
-                  "error",
-                  "not_configured"
-                ]
+                "enum": ["ok", "error", "not_configured"]
               },
               "litellm": {
                 "type": "string",
-                "enum": [
-                  "ok",
-                  "error",
-                  "not_configured"
-                ]
+                "enum": ["ok", "error", "not_configured"]
+              },
+              "ams": {
+                "type": "string",
+                "enum": ["ok", "error", "not_configured"]
+              },
+              "letta": {
+                "type": "string",
+                "enum": ["ok", "error", "not_configured"]
               }
             }
           }
@@ -102,21 +96,13 @@
       },
       "LLMRequest": {
         "type": "object",
-        "required": [
-          "model",
-          "messages"
-        ],
+        "required": ["model", "messages"],
         "properties": {
           "model": {
             "type": "string",
             "description": "The model to use for completion",
             "example": "gpt-4o",
-            "enum": [
-              "gpt-4o",
-              "gpt-4",
-              "gpt-3.5-turbo",
-              "claude-3-sonnet"
-            ]
+            "enum": ["gpt-4o", "gpt-4", "gpt-3.5-turbo", "claude-3-sonnet"]
           },
           "messages": {
             "type": "array",
@@ -149,18 +135,11 @@
       },
       "Message": {
         "type": "object",
-        "required": [
-          "role",
-          "content"
-        ],
+        "required": ["role", "content"],
         "properties": {
           "role": {
             "type": "string",
-            "enum": [
-              "system",
-              "user",
-              "assistant"
-            ],
+            "enum": ["system", "user", "assistant"],
             "description": "The role of the message author"
           },
           "content": {
@@ -170,231 +149,163 @@
           }
         }
       },
-      "LLMResponse": {
+      "CreateAgentRequest": {
+        "type": "object",
+        "required": ["template_id"],
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "description": "ID of the agent template to use",
+            "example": "support-agent"
+          },
+          "version": {
+            "type": "string",
+            "description": "Specific version of the template",
+            "example": "1.0.0"
+          },
+          "use_latest": {
+            "type": "boolean",
+            "description": "Use the latest version of the template",
+            "default": false
+          },
+          "agent_name": {
+            "type": "string",
+            "description": "Name for the created agent",
+            "example": "My Support Agent"
+          },
+          "variables": {
+            "type": "object",
+            "description": "Template variables",
+            "additionalProperties": true,
+            "example": {
+              "company_name": "Test Company",
+              "support_level": "premium"
+            }
+          }
+        }
+      },
+      "AgentResponse": {
         "type": "object",
         "properties": {
-          "id": {
+          "agent": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "agent-9dab0385-77fc-40ec-a22a-2197011994ee"
+              },
+              "name": {
+                "type": "string",
+                "example": "My Support Agent"
+              },
+              "llm_config": {
+                "type": "object"
+              },
+              "embedding_config": {
+                "type": "object"
+              },
+              "memory": {
+                "type": "object"
+              }
+            }
+          },
+          "template_checksum": {
             "type": "string",
-            "example": "chatcmpl-123"
-          },
-          "object": {
+            "description": "SHA256 checksum of the template used"
+          }
+        }
+      },
+      "TemplateValidationRequest": {
+        "type": "string",
+        "description": "YAML or JSON content of the agent template",
+        "example": "af_version: \"1.0\"\ntemplate:\n  id: \"test-agent\"\n  name: \"Test Agent\"\n  version: \"1.0.0\""
+      },
+      "ValidationResponse": {
+        "type": "object",
+        "properties": {
+          "format": {
             "type": "string",
-            "example": "chat.completion"
+            "enum": ["yaml", "json"]
           },
-          "created": {
-            "type": "integer",
-            "example": 1677652288
-          },
-          "model": {
-            "type": "string",
-            "example": "gpt-4o"
-          },
-          "choices": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "index": {
-                  "type": "integer"
-                },
-                "message": {
-                  "$ref": "#/components/schemas/Message"
-                },
-                "finish_reason": {
-                  "type": "string",
-                  "enum": [
-                    "stop",
-                    "length",
-                    "content_filter"
-                  ],
-                  "example": "stop"
+          "validation": {
+            "type": "object",
+            "properties": {
+              "valid": {
+                "type": "boolean"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
                 }
               }
             }
+          }
+        }
+      },
+      "PublishResponse": {
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "example": "support-agent"
           },
-          "usage": {
-            "type": "object",
-            "properties": {
-              "prompt_tokens": {
-                "type": "integer",
-                "example": 9
-              },
-              "completion_tokens": {
-                "type": "integer",
-                "example": 12
-              },
-              "total_tokens": {
-                "type": "integer",
-                "example": 21
-              }
-            }
+          "version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
+          "checksum": {
+            "type": "string",
+            "description": "SHA256 checksum of the published template"
+          },
+          "is_latest": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "UpgradeAgentRequest": {
+        "type": "object",
+        "properties": {
+          "target_version": {
+            "type": "string",
+            "description": "Target version to upgrade to",
+            "example": "1.1.0"
+          },
+          "use_latest": {
+            "type": "boolean",
+            "description": "Upgrade to the latest version",
+            "default": false
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Perform a dry run without actually upgrading",
+            "default": true
+          },
+          "use_queue": {
+            "type": "boolean",
+            "description": "Queue the upgrade for background processing",
+            "default": false
           }
         }
       },
       "ErrorResponse": {
         "type": "object",
-        "required": [
-          "error",
-          "message"
-        ],
+        "required": ["error"],
         "properties": {
           "error": {
             "type": "string",
-            "example": "Unauthorized"
+            "example": "Bad Request"
           },
           "message": {
             "type": "string",
-            "example": "Invalid agent key"
-          }
-        }
-      },
-      "CreateAgentRequest": {
-        "type": "object",
-        "required": ["name"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "example": "My Personal Assistant",
-            "description": "Name for the agent"
-          },
-          "description": {
-            "type": "string",
-            "example": "A helpful personal assistant",
-            "description": "Description of the agent"
-          },
-          "personalInfo": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "example": "John Doe",
-                "description": "User's real name"
-              },
-              "interests": {
-                "type": "array",
-                "items": {"type": "string"},
-                "example": ["programming", "AI", "music"],
-                "description": "User's interests"
-              },
-              "preferences": {
-                "type": "object",
-                "example": {"communication_style": "friendly", "response_length": "medium"},
-                "description": "User preferences"
-              },
-              "background": {
-                "type": "string",
-                "example": "Software engineer with 5 years experience",
-                "description": "User's background"
-              },
-              "goals": {
-                "type": "array",
-                "items": {"type": "string"},
-                "example": ["learn new technologies", "improve productivity"],
-                "description": "User's goals"
-              }
-            }
-          }
-        }
-      },
-      "Agent": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "agent-123"
-          },
-          "name": {
-            "type": "string",
-            "example": "My Personal Assistant"
-          },
-          "description": {
-            "type": "string"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "user_id": {
-            "type": "string"
-          },
-          "is_active": {
-            "type": "boolean"
-          }
-        }
-      },
-      "LettaMessage": {
-        "type": "object",
-        "properties": {
-          "role": {
-            "type": "string",
-            "enum": ["user", "assistant"]
-          },
-          "text": {
-            "type": "string",
-            "example": "Hello, how can I help you today?"
-          }
-        }
-      },
-      "SendMessageRequest": {
-        "type": "object",
-        "required": ["messages"],
-        "properties": {
-          "messages": {
-            "type": "array",
-            "items": {"$ref": "#/components/schemas/LettaMessage"},
-            "description": "Messages to send to the agent"
-          },
-          "stream_tokens": {
-            "type": "boolean",
-            "default": false,
-            "description": "Enable token-level streaming"
-          },
-          "stream_steps": {
-            "type": "boolean", 
-            "default": false,
-            "description": "Enable step-level streaming"
+            "example": "Invalid request parameters"
           }
         }
       }
     }
   },
-  "servers": [
-    {
-      "url": "https://maroon-koi-main-714e1e1.d2.zuplo.dev",
-      "description": "Production"
-    }
-  ],
   "paths": {
-        "/docs": {
-      "get": {
-        "summary": "API Documentation",
-        "operationId": "swagger-docs",
-        "tags": ["System"],
-        "x-zuplo-route": {
-          "corsPolicy": "none",
-          "handler": {
-            "export": "default",
-            "module": "$import(./modules/swagger-docs)"
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Swagger UI documentation",
-            "content": {
-             "text/html": {
-               "schema": {
-                 "type": "string"
-               }
-              }
-            }
-         }
-       }
-      }
-    },
     "/": {
       "get": {
         "operationId": "api-info",
@@ -406,10 +317,8 @@
           }
         },
         "summary": "API Information",
-        "description": "Returns basic information about the Agent Proxy API",
-        "tags": [
-          "System"
-        ],
+        "description": "Get basic information about the API",
+        "tags": ["System"],
         "responses": {
           "200": {
             "description": "API information",
@@ -434,11 +343,9 @@
             "module": "$import(./modules/health-check)"
           }
         },
-        "summary": "Health check endpoint",
-        "description": "Returns the health status of the API",
-        "tags": [
-          "System"
-        ],
+        "summary": "Health Check",
+        "description": "Check the health status of the API and its dependencies",
+        "tags": ["System"],
         "responses": {
           "200": {
             "description": "Service is healthy",
@@ -451,384 +358,39 @@
             }
           },
           "503": {
-            "description": "Service is unhealthy"
+            "description": "Service is unhealthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/api.json": {
+    "/docs": {
       "get": {
-        "operationId": "openapi-spec",
+        "operationId": "swagger-docs",
         "x-zuplo-route": {
           "corsPolicy": "none",
           "handler": {
             "export": "default",
-            "module": "$import(./modules/openapi-spec)"
+            "module": "$import(./modules/swagger-docs)"
           }
         },
-        "summary": "OpenAPI Specification",
-        "description": "Returns the OpenAPI specification for this API",
-        "tags": [
-          "System"
-        ],
+        "summary": "API Documentation",
+        "description": "Interactive Swagger documentation",
+        "tags": ["System"],
         "responses": {
           "200": {
-            "description": "OpenAPI specification",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
+            "description": "HTML documentation page"
           }
         }
       }
     },
-    "/api/v1/agents/{userid}/messages": {
-      "x-zuplo-path": {
-        "pathMode": "open-api"
-      },
-      "post": {
-        "operationId": "proxy-agent-to-litellm",
-        "x-zuplo-route": {
-          "corsPolicy": "none",
-          "handler": {
-            "export": "urlRewriteHandler",
-            "module": "$import(@zuplo/runtime)",
-            "options": {
-              "rewritePattern": "${env.LITELLM_BASE_URL}/chat/completions",
-              "forwardSearch": true
-            }
-          },
-          "policies": {
-            "inbound": [
-              "agent-auth-proxy"
-            ]
-          }
-        },
-        "summary": "Proxy agent requests to LiteLLM",
-        "description": "Accepts agent requests with secret key and forwards to LiteLLM with user-specific key for proper billing",
-        "tags": [
-          "Agent Proxy"
-        ],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "userid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-zA-Z0-9-_]+$"
-            },
-            "description": "User ID for LiteLLM key lookup",
-            "example": "user123"
-          }
-        ],
-        "requestBody": {
-          "description": "OpenAI-compatible LLM request payload",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LLMRequest"
-              },
-              "examples": {
-                "basic_request": {
-                  "summary": "Basic chat request",
-                  "value": {
-                    "model": "gpt-4o",
-                    "messages": [
-                      {
-                        "role": "user",
-                        "content": "Hello, how are you?"
-                      }
-                    ],
-                    "max_tokens": 100,
-                    "temperature": 0.7
-                  }
-                },
-                "conversation": {
-                  "summary": "Multi-turn conversation",
-                  "value": {
-                    "model": "gpt-4o",
-                    "messages": [
-                      {
-                        "role": "system",
-                        "content": "You are a helpful assistant."
-                      },
-                      {
-                        "role": "user",
-                        "content": "What is the capital of France?"
-                      },
-                      {
-                        "role": "assistant",
-                        "content": "The capital of France is Paris."
-                      },
-                      {
-                        "role": "user",
-                        "content": "What is its population?"
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful LLM response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LLMResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid agent secret key",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "User has no LiteLLM access",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v2/agents": {
-      "get": {
-        "operationId": "list-user-agents",
-        "x-zuplo-route": {
-          "corsPolicy": "none",
-          "handler": {
-            "export": "urlRewriteHandler",
-            "module": "$import(@zuplo/runtime)",
-            "options": {
-              "rewritePattern": "${env.LETTA_BASE_URL}/agents",
-              "forwardSearch": true
-            }
-          },
-          "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
-          }
-        },
-        "summary": "List user agents",
-        "description": "Get all agents for authenticated user",
-        "tags": ["Agents"],
-        "security": [{"UserJWT": []}],
-        "responses": {
-          "200": {
-            "description": "List of user agents",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {"$ref": "#/components/schemas/Agent"}
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "create-agent",
-        "x-zuplo-route": {
-          "corsPolicy": "none",
-          "handler": {
-            "export": "urlRewriteHandler",
-            "module": "$import(@zuplo/runtime)",
-            "options": {
-              "rewritePattern": "${env.AGENT_MANAGEMENT_URL}/api/agents/create",
-              "forwardSearch": false
-            }
-          },
-          "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
-          }
-        },
-        "summary": "Create new agent",
-        "description": "Create new agent for user via Agent Management Service",
-        "tags": ["Agents"],
-        "security": [{"UserJWT": []}],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {"$ref": "#/components/schemas/CreateAgentRequest"}
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Agent created successfully",
-            "content": {
-              "application/json": {
-                "schema": {"$ref": "#/components/schemas/Agent"}
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/letta/agents": {
-      "get": {
-        "operationId": "letta-list-agents",
-        "x-zuplo-route": {
-          "corsPolicy": "none",
-          "handler": {
-            "export": "urlRewriteHandler",
-            "module": "$import(@zuplo/runtime)",
-            "options": {
-              "rewritePattern": "${env.LETTA_BASE_URL}/agents",
-              "forwardSearch": true
-            }
-          },
-          "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
-          }
-        },
-        "summary": "List Letta agents",
-        "description": "Get all Letta agents for authenticated user",
-        "tags": ["Letta Server"],
-        "security": [{"UserJWT": []}],
-        "responses": {
-          "200": {
-            "description": "List of Letta agents"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/v1/letta/agents/{agent_id}": {
-      "x-zuplo-path": {
-        "pathMode": "open-api"
-      },
-      "get": {
-        "operationId": "letta-get-agent",
-        "x-zuplo-route": {
-          "corsPolicy": "none",
-          "handler": {
-            "export": "urlRewriteHandler",
-            "module": "$import(@zuplo/runtime)",
-            "options": {
-              "rewritePattern": "${env.LETTA_BASE_URL}/agents/${params.agent_id}",
-              "forwardSearch": true
-            }
-          },
-          "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
-          }
-        },
-        "summary": "Get Letta agent details",
-        "tags": ["Letta Server"],
-        "security": [{"UserJWT": []}],
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Agent details"
-          },
-          "404": {
-            "description": "Agent not found"
-          }
-        }
-      },
-      "patch": {
-        "operationId": "letta-update-agent",
-        "x-zuplo-route": {
-          "corsPolicy": "none",
-          "handler": {
-            "export": "urlRewriteHandler",
-            "module": "$import(@zuplo/runtime)",
-            "options": {
-              "rewritePattern": "${env.LETTA_BASE_URL}/agents/${params.agent_id}",
-              "forwardSearch": true
-            }
-          },
-          "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
-          }
-        },
-        "summary": "Update Letta agent",
-        "tags": ["Letta Server"],
-        "security": [{"UserJWT": []}],
-        "parameters": [
-          {
-            "name": "agent_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Agent updated"
-          }
-        }
-      }
-    },
-    "/api/v1/letta/agents/{agent_id}/messages": {
-      "x-zuplo-path": {
-        "pathMode": "open-api"
-      },
+    "/api/v1/agents/{userId}/messages": {
       "post": {
         "operationId": "letta-send-message",
         "x-zuplo-route": {
@@ -837,8 +399,8 @@
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
             "options": {
-              "rewritePattern": "${env.LETTA_BASE_URL}/agents/${params.agent_id}/messages",
-              "forwardSearch": true
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.userId}/messages",
+              "forwardSearch": false
             }
           },
           "policies": {
@@ -851,12 +413,13 @@
         "security": [{"UserJWT": []}],
         "parameters": [
           {
-            "name": "agent_id",
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "User ID that owns the agent"
           }
         ],
         "requestBody": {
@@ -886,6 +449,9 @@
           },
           "400": {
             "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
           }
         }
       },
@@ -897,7 +463,7 @@
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
             "options": {
-              "rewritePattern": "${env.LETTA_BASE_URL}/agents/${params.agent_id}/messages",
+              "rewritePattern": "${env.LETTA_BASE_URL}/v1/agents/${params.userId}/messages",
               "forwardSearch": true
             }
           },
@@ -911,7 +477,7 @@
         "security": [{"UserJWT": []}],
         "parameters": [
           {
-            "name": "agent_id",
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
@@ -928,7 +494,7 @@
           },
           {
             "name": "offset",
-            "in": "query", 
+            "in": "query",
             "schema": {
               "type": "integer",
               "default": 0
@@ -942,16 +508,16 @@
         }
       }
     },
-    "/api/v1/agents/create": {
+    "/api/v1/templates/validate": {
       "post": {
-        "operationId": "create-personalized-agent",
+        "operationId": "validate-template",
         "x-zuplo-route": {
           "corsPolicy": "none",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
             "options": {
-              "rewritePattern": "${env.AGENT_MANAGEMENT_URL}/api/agents/create",
+              "rewritePattern": "${env.AMS_BASE_URL}/templates/validate",
               "forwardSearch": false
             }
           },
@@ -959,156 +525,336 @@
             "inbound": ["user-jwt-auth", "add-auth-headers"]
           }
         },
-        "summary": "Create personalized agent",
-        "description": "Create a personalized Letta agent via Agent Management Service",
-        "tags": ["Agent Management"],
+        "summary": "Validate agent template",
+        "description": "Validate an agent template for syntax and completeness",
+        "tags": ["Template Management"],
         "security": [{"UserJWT": []}],
         "requestBody": {
           "required": true,
           "content": {
+            "application/x-yaml": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateValidationRequest"
+              }
+            },
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "personalInfo": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "description": "User's name",
-                        "example": "Иван Петров"
-                      },
-                      "interests": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        },
-                        "description": "User's interests",
-                        "example": ["программирование", "искусственный интеллект"]
-                      },
-                      "communicationStyle": {
-                        "type": "string",
-                        "description": "Preferred communication style",
-                        "example": "дружелюбный и профессиональный"
-                      },
-                      "background": {
-                        "type": "string",
-                        "description": "User's background",
-                        "example": "Software Engineer с 5-летним опытом"
-                      },
-                      "goals": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        },
-                        "description": "User's goals",
-                        "example": ["изучить новые технологии", "повысить продуктивность"]
-                      },
-                      "projects": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "name": {"type": "string"},
-                            "description": {"type": "string"},
-                            "status": {"type": "string"}
-                          }
-                        }
-                      },
-                      "preferences": {
-                        "type": "object",
-                        "properties": {
-                          "responseLength": {
-                            "type": "string",
-                            "enum": ["short", "medium", "long"],
-                            "default": "medium"
-                          },
-                          "technicalLevel": {
-                            "type": "string",
-                            "enum": ["beginner", "intermediate", "advanced"],
-                            "default": "intermediate"
-                          },
-                          "languages": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "default": ["ru", "en"]
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "$ref": "#/components/schemas/TemplateValidationRequest"
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Agent created successfully",
+          "200": {
+            "description": "Validation result",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {"type": "boolean"},
-                    "agent_id": {"type": "string"},
-                    "chat_endpoint": {"type": "string"},
-                    "message": {"type": "string"}
-                  }
+                  "$ref": "#/components/schemas/ValidationResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Bad request"
-          },
-          "409": {
-            "description": "Agent already exists for user"
+            "description": "Invalid template format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/api/v1/agents/status": {
-      "get": {
-        "operationId": "get-user-agent-status",
+    "/api/v1/templates/publish": {
+      "post": {
+        "operationId": "publish-template",
         "x-zuplo-route": {
           "corsPolicy": "none",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
             "options": {
-              "rewritePattern": "${env.AGENT_MANAGEMENT_URL}/api/agents/status",
-              "forwardSearch": true
+              "rewritePattern": "${env.AMS_BASE_URL}/templates/publish",
+              "forwardSearch": false
             }
           },
           "policies": {
             "inbound": ["user-jwt-auth", "add-auth-headers"]
           }
         },
-        "summary": "Get user agent status",
-        "description": "Check if user has an agent and get its status",
-        "tags": ["Agent Management"],
+        "summary": "Publish agent template",
+        "description": "Publish a validated agent template to the template repository",
+        "tags": ["Template Management"],
         "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique key to prevent duplicate requests"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-yaml": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateValidationRequest"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateValidationRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Agent status",
+            "description": "Template published successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - template version already exists or duplicate request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agents/create": {
+      "post": {
+        "operationId": "create-agent",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.AMS_BASE_URL}/agents/create",
+              "forwardSearch": false
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Create new agent",
+        "description": "Create a new Letta agent from a template via AMS",
+        "tags": ["Agent Management"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique key to prevent duplicate requests"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agent created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agents/{agent_id}/upgrade": {
+      "post": {
+        "operationId": "upgrade-agent",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.AMS_BASE_URL}/agents/${params.agent_id}/upgrade",
+              "forwardSearch": false
+            }
+          },
+          "policies": {
+            "inbound": ["user-jwt-auth", "add-auth-headers"]
+          }
+        },
+        "summary": "Upgrade agent to new template version",
+        "description": "Upgrade an existing agent to a newer template version",
+        "tags": ["Agent Management"],
+        "security": [{"UserJWT": []}],
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the agent to upgrade"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique key to prevent duplicate requests"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpgradeAgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upgrade completed or dry run result",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "hasAgent": {"type": "boolean"},
-                    "agent_id": {"type": "string"},
-                    "status": {"type": "string"},
-                    "created_at": {"type": "string"},
-                    "chat_endpoint": {"type": "string"}
+                    "plan": {
+                      "type": "array",
+                      "description": "Migration steps to be executed"
+                    },
+                    "diff": {
+                      "type": "array",
+                      "description": "Changes that will be made"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "dry_run": {
+                      "type": "boolean"
+                    },
+                    "applied": {
+                      "type": "boolean"
+                    },
+                    "new_version": {
+                      "type": "string"
+                    }
                   }
                 }
               }
             }
           },
           "404": {
-            "description": "No agent found"
+            "description": "Agent not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ams/health": {
+      "get": {
+        "operationId": "ams-health-check",
+        "x-zuplo-route": {
+          "corsPolicy": "none",
+          "handler": {
+            "export": "urlRewriteHandler",
+            "module": "$import(@zuplo/runtime)",
+            "options": {
+              "rewritePattern": "${env.AMS_BASE_URL}/health",
+              "forwardSearch": false
+            }
+          }
+        },
+        "summary": "AMS Health Check",
+        "description": "Check the health status of the Agent Management Service",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "AMS is healthy"
           }
         }
       }
