@@ -528,7 +528,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "List Letta agents",
@@ -566,7 +566,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Get agent details",
@@ -612,7 +612,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Get agent messages",
@@ -659,7 +659,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Send message to agent",
@@ -715,7 +715,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Get agent memory",
@@ -752,7 +752,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Update agent memory",
@@ -807,7 +807,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Get archival memory",
@@ -844,7 +844,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Add to archival memory",
@@ -899,7 +899,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Send message to agent (Legacy)",
@@ -1003,7 +1003,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Validate agent template",
@@ -1053,7 +1053,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Publish agent template",
@@ -1114,7 +1114,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Create new agent",
@@ -1170,7 +1170,7 @@
             }
           },
           "policies": {
-            "inbound": ["user-jwt-auth", "add-auth-headers"]
+            "inbound": ["allow-preflight", "user-jwt-auth", "add-auth-headers"]
           }
         },
         "summary": "Upgrade agent to new template version",
