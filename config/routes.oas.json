@@ -8,6 +8,30 @@
     }
   },
   "openapi": "3.0.3",
+  "corsPolicies": [
+    {
+      "name": "agent-frontend",
+      "allowedOrigins": [
+        "https://personal-agent-beta-front-production.up.railway.app"
+      ],
+      "allowedMethods": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "allowedHeaders": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-Requested-With"
+      ],
+      "allowCredentials": true
+    }
+  ],
   "components": {
     "securitySchemes": {
       "BearerAuth": {
@@ -392,7 +416,7 @@
       "get": {
         "operationId": "api-info",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "default",
             "module": "$import(./modules/api-info)"
@@ -419,7 +443,7 @@
       "get": {
         "operationId": "health-check",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "default",
             "module": "$import(./modules/health-check)"
@@ -446,7 +470,7 @@
       "get": {
         "operationId": "swagger-docs",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "default",
             "module": "$import(./modules/swagger-docs)"
@@ -466,7 +490,7 @@
       "get": {
         "operationId": "openapi-spec",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "default",
             "module": "$import(./modules/openapi-spec)"
@@ -494,7 +518,7 @@
       "get": {
         "operationId": "letta-list-agents",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -532,7 +556,7 @@
       "get": {
         "operationId": "letta-get-agent",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -578,7 +602,7 @@
       "get": {
         "operationId": "letta-get-messages",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -625,7 +649,7 @@
       "post": {
         "operationId": "letta-send-message",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -681,7 +705,7 @@
       "get": {
         "operationId": "letta-get-memory",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -718,7 +742,7 @@
       "post": {
         "operationId": "letta-update-memory",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -773,7 +797,7 @@
       "get": {
         "operationId": "letta-get-archival",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -810,7 +834,7 @@
       "post": {
         "operationId": "letta-add-archival",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -865,7 +889,7 @@
       "post": {
         "operationId": "send-message-legacy",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -915,7 +939,7 @@
       "post": {
         "operationId": "proxy-agent-to-litellm",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "default",
             "module": "$import(./modules/agent-auth-proxy)",
@@ -969,7 +993,7 @@
       "post": {
         "operationId": "validate-template",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -1019,7 +1043,7 @@
       "post": {
         "operationId": "publish-template",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -1080,7 +1104,7 @@
       "post": {
         "operationId": "create-agent",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -1136,7 +1160,7 @@
       "post": {
         "operationId": "upgrade-agent",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
@@ -1185,7 +1209,7 @@
       "get": {
         "operationId": "ams-health-check",
         "x-zuplo-route": {
-          "corsPolicy": "none",
+          "corsPolicy": "agent-frontend",
           "handler": {
             "export": "urlRewriteHandler",
             "module": "$import(@zuplo/runtime)",
