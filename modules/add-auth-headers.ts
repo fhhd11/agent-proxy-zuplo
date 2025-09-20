@@ -2,7 +2,7 @@ import { ZuploContext, ZuploRequest } from "@zuplo/runtime";
 
 interface AuthHeadersOptions {
   lettaApiKey: string;
-  amsApiKey: string;  // Переименовано с agentManagementKey
+  amsApiKey: string;
   supabaseAnonKey?: string;
 }
 
@@ -20,19 +20,27 @@ export default async function addAuthHeaders(
     context.log.info(`Processing request for path: ${pathname}`);
 
     // Определяем к какому сервису идет запрос и добавляем соответствующий ключ
-    if (pathname.startsWith("/api/v1/agents/") && pathname.includes("/messages")) {
-      // Запросы к Letta Server для отправки сообщений агентам
+    if (pathname.startsWith("/api/v1/letta/") || 
+        (pathname.startsWith("/api/v1/agents/") && pathname.includes("/messages"))) {
+      // Запросы к Letta Server - все эндпоинты под /api/v1/letta/ и legacy эндпоинт для сообщений
       if (options.lettaApiKey) {
         newHeaders.set("Authorization", `Bearer ${options.lettaApiKey}`);
-        context.log.info("Added Letta API key for agent messaging");
+        context.log.info("Added Letta API key for Letta Server request");
       } else {
-        context.log.error("Missing Letta API key for agent messaging request");
+        context.log.error("Missing Letta API key for Letta Server request");
+        return new Response(JSON.stringify({
+          error: "Configuration Error",
+          message: "Letta API key not configured"
+        }), { 
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
       }
     } 
     else if (
       pathname.startsWith("/api/v1/templates/") ||
       pathname.startsWith("/api/v1/agents/create") ||
-      pathname.startsWith("/api/v1/agents/") && pathname.includes("/upgrade") ||
+      (pathname.startsWith("/api/v1/agents/") && pathname.includes("/upgrade")) ||
       pathname.startsWith("/api/v1/ams/")
     ) {
       // Запросы к Agent Management Service (AMS)
@@ -41,6 +49,13 @@ export default async function addAuthHeaders(
         context.log.info("Added AMS API key for agent management request");
       } else {
         context.log.error("Missing AMS API key for agent management request");
+        return new Response(JSON.stringify({
+          error: "Configuration Error", 
+          message: "AMS API key not configured"
+        }), { 
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
       }
     }
 
@@ -72,6 +87,9 @@ export default async function addAuthHeaders(
       headers: newHeaders,
       body: request.body,
     });
+
+    // Сохраняем пользователя в новом запросе
+    (newRequest as ZuploRequest).user = request.user;
 
     return newRequest as ZuploRequest;
 
