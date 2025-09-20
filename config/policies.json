@@ -1,6 +1,15 @@
 {
   "policies": [
     {
+      "name": "allow-preflight",
+      "policyType": "custom-code-inbound",
+      "description": "Allows OPTIONS preflight requests to bypass authentication. Must run before inbound auth policies.",
+      "handler": {
+        "export": "default",
+        "module": "$import(./modules/allow-preflight)"
+      }
+    },
+    {
       "name": "agent-auth-proxy",
       "policyType": "custom-code-inbound",
       "handler": {
@@ -15,7 +24,7 @@
     },
     {
       "name": "user-jwt-auth",
-      "policyType": "supabase-jwt-auth-inbound", 
+      "policyType": "supabase-jwt-auth-inbound",
       "handler": {
         "export": "SupabaseJwtInboundPolicy",
         "module": "$import(@zuplo/runtime)",
@@ -29,7 +38,7 @@
       "name": "service-auth",
       "policyType": "custom-code-inbound",
       "handler": {
-        "export": "default", 
+        "export": "default",
         "module": "$import(./modules/service-auth)",
         "options": {
           "serviceKey": "$env(SERVICE_SECRET_KEY)"
